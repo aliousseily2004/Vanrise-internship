@@ -1,0 +1,1668 @@
+﻿<!DOCTYPE html>
+<html lang="en" ng-app="clientApp">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <script src="https://ajax.googleapis.com/ajax/libs/angularjs/1.8.2/angular.min.js"></script>
+
+    <title>Client Management System</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            line-height: 1.6;
+            margin: 0;
+            padding: 20px;
+            background-color: #f4f4f4;
+        }
+
+        .container {
+            width: 80%;
+            margin: auto;
+            background: white;
+            padding: 20px;
+            border-radius: 5px;
+            box-shadow: 0 0 10px rgba(0,0,0,0.1);
+        }
+
+        table {
+            width: 100%;
+            border-collapse: collapse;
+            margin-top: 20px;
+        }
+
+        table, th, td {
+            border: 1px solid #ddd;
+        }
+
+        th, td {
+            padding: 12px;
+            text-align: left;
+        }
+
+        th {
+            background-color: #f2f2f2;
+            font-weight: bold;
+        }
+
+        tr:nth-child(even) {
+            background-color: #f9f9f9;
+        }
+
+        tr:hover {
+            background-color: #f5f5f5;
+        }
+
+        .no-data {
+            text-align: center;
+            color: #666;
+            padding: 20px;
+        }
+
+        .filter-container {
+            display: flex;
+            justify-content: space-between;
+            margin-bottom: 20px;
+        }
+
+        .filter-input {
+            padding: 8px;
+            border: 1px solid #ddd;
+            border-radius: 4px;
+            width: 30%;
+        }
+
+        .filter-button, .action-button {
+            padding: 8px 16px;
+            background-color: #007bff;
+            color: white;
+            border: none;
+            border-radius: 4px;
+            cursor: pointer;
+        }
+
+            .filter-button:hover, .action-button:hover {
+                background-color: #0056b3;
+            }
+
+        .modal {
+            display: none;
+            position: fixed;
+            z-index: 1000;
+            left: 0;
+            top: 0;
+            width: 100%;
+            height: 100%;
+            overflow: auto;
+            background-color: rgba(0, 0, 0, 0.4);
+        }
+
+        .modal-content {
+            background-color: #fefefe;
+            margin: 10% auto;
+            padding: 25px;
+            border: 1px solid #888;
+            width: 50%;
+            max-width: 500px;
+            border-radius: 8px;
+            box-shadow: 0 4px 8px rgba(0,0,0,0.1);
+        }
+
+            .modal-content div {
+                margin-bottom: 15px;
+            }
+
+            .modal-content label {
+                display: block;
+                margin-bottom: 5px;
+                font-weight: bold;
+            }
+
+            .modal-content input[type="text"],
+            .modal-content input[type="date"],
+            .modal-content select {
+                width: 100%;
+                padding: 8px;
+                border: 1px solid #ddd;
+                border-radius: 4px;
+                box-sizing: border-box;
+            }
+
+        .close {
+            color: #aaa;
+            float: right;
+            font-size: 28px;
+            font-weight: bold;
+            margin-top: -10px;
+        }
+
+            .close:hover,
+            .close:focus {
+                color: black;
+                text-decoration: none;
+                cursor: pointer;
+            }
+    </style>
+
+</head>
+<body>
+    <div class="container">
+        <h1>Client Management System</h1>
+
+        <div class="filter-container">
+            <input type="text" id="nameFilter" class="filter-input" placeholder="Filter by Name">
+            <client-type-selector id="typeFilter" selected-type="filterTypeValue" class="filter-input" placeholder="Filter by Type"></client-type-selector>
+            <button id="applyFilter" class="filter-button">Apply Filter</button>
+            <button id="addClientBtn" class="action-button">Add Client</button>
+        </div>
+
+        <table id="clientTable">
+            <thead>
+                <tr>
+                    <th>ID</th>
+                    <th>Name</th>
+                    <th>Type</th>
+                    <th>Birth Date</th>
+                    <th>Actions</th>
+                </tr>
+            </thead>
+            <tbody id="clientTableBody">
+                <!-- Client rows will be populated here -->
+            </tbody>
+        </table>
+
+        <div id="noDataMessage" class="no-data" style="display:none;">
+            <p>No clients found matching the criteria.</p>
+        </div>
+
+        <!-- Modal for Add/Edit Client -->
+        <div id="clientModal" class="modal">
+            <div class="modal-content">
+                <span class="close" id="closeModal">&times;</span>
+                <h2 id="modalTitle">Add New Client</h2>
+                <form id="clientForm">
+                    <input type="hidden" id="clientId">
+                    <div>
+                        <label for="clientName">Name:</label>
+                        <input type="text" id="clientName" required>
+                    </div>
+                    <div>
+                        <label for="clientType">Type:</label>
+                        <client-type-selector selected-type="clientTypeValue"></client-type-selector>
+                        <input type="hidden" id="clientType">
+                    </div>
+                    <div>
+                        <label for="clientBirthDate">Birth Date:</label>
+                        <input type="date" id="clientBirthDate">
+                    </div>
+                    <div>
+                        <label for="clientPhoneNumber">Phone Number:</label>
+                        <input type="tel" id="clientPhoneNumber">
+                    </div>
+                    <div>
+                        <label for="clientBED">Begin Effective Date (BED):</label>
+                        <input type="date" id="clientBED">
+                    </div>
+                    <div>
+                        <label for="clientEED">End Effective Date (EED):</label>
+                        <input type="date" id="clientEED">
+                    </div>
+                    <button type="submit" class="action-button">Save</button>
+                </form>
+            </div>
+        </div>
+
+    </div>
+    <div id="reserveModal" class="modal" ng-controller="reservationController">
+        <div class="modal-content">
+            <span class="close" id="closeReserveModal">&times;</span>
+            <h2 id="reserveModalTitle">Reserve Client</h2>
+            <form id="reserveForm">
+                <input type="hidden" id="reserveClientId">
+                <div>
+                    <label for="reservePhoneNumber">Phone Number:</label>
+                    <select id="reservePhoneNumber" ng-model="selectedPhone" class="scrollable-select">
+                        <option value="">Select Phone</option>
+                        <option ng-repeat="phone in availablePhones" value="{{phone}}">{{phone}}</option>
+                    </select>
+                </div>
+                <button type="submit" class="action-button">Reserve</button>
+            </form>
+        </div>
+    </div>
+
+    <!-- Unreserve Modal -->
+    <div id="unreserveModal" class="modal" ng-controller="unreserveController">
+        <div class="modal-content">
+            <span class="close" id="closeUnreserveModal">&times;</span>
+            <h2 id="unreserveModalTitle">Unreserve Client</h2>
+            <form id="unreserveForm" ng-submit="handleUnreserveSubmit()">
+                <input type="hidden" id="unreserveClientId">
+                <div>
+                    <label for="unreservePhoneNumber">Phone Number:</label>
+                    <select id="unreservePhoneNumber" ng-model="selectedUnreservePhone" class="scrollable-select">
+                        <option value="">Select Phone</option>
+                        <option ng-repeat="phone in reservedPhones" value="{{phone}}">{{phone}}</option>
+                    </select>
+                </div>
+                <button type="submit" class="action-button">Unreserve</button>
+            </form>
+        </div>
+    </div>
+
+    <script>
+        angular.module('clientApp', [])
+            .controller('reservationController', function ($scope, $http) {
+                $scope.uniquePhones = [];
+                $scope.availablePhones = []; // New array for available phones
+
+                $scope.loadUniquePhones = function () {
+                    $http.get('/api/reservations')
+                        .then(function (response) {
+                            // All unique phone numbers
+                            $scope.uniquePhones = [...new Set(
+                                response.data
+                                    .map(item => item.PhoneNumber)
+                            )];
+
+                            // Available phones (not currently reserved)
+                            $scope.availablePhones = [...new Set(
+                                response.data
+                                    .filter(item => item.EED !== null || item.EED === '0001-01-01T00:00:00')
+                                    .map(item => item.PhoneNumber)
+                            )];
+                        })
+                        .catch(function (error) {
+                            console.error('Error loading phone numbers:', error);
+                        });
+                };
+                $scope.loadUniquePhones();
+
+                $scope.handleReserveFormSubmit = function (e) {
+                    e.preventDefault();
+                    const reserveData = {
+                        ClientId: parseInt(document.getElementById('reserveClientId').value),
+                        PhoneNumber: document.getElementById('reservePhoneNumber').value
+                    };
+                    $http.post('/api/Clients/Reserve', reserveData)
+                        .then(function () {
+                            document.getElementById('reserveModal').style.display = 'none';
+                            fetchClients();
+                            $scope.loadUniquePhones(); // Refresh the phone list
+                        })
+                        .catch(function (error) {
+                            console.error('Reservation submission error:', error);
+                            if (error.data && error.data.includes('phone number is in use')) {
+                                // Filter out the used phone number
+                                $scope.availablePhones = $scope.availablePhones.filter(phone => phone !== reserveData.PhoneNumber);
+                                alert('This client cannot be reserved. The phone number is already in use.');
+                            } else if (error.data && error.data.includes('already be reserved')) {
+                                alert('This client may already be reserved.');
+                            }
+                            else {
+                                alert('Error reserving client: ' + (error.data || 'Unknown error'));
+                            }
+                        });
+                };
+            })
+            .controller('unreserveController', function ($scope, $http) {
+                $scope.reservedPhones = [];
+                $scope.selectedUnreservePhone = '';
+
+                $scope.loadReservedPhones = function (clientId) {
+                    $http.get(`/api/Clients/${clientId}`)
+                        .then(function (response) {
+                            if (response.data.PhoneNumber && response.data.EED === null) {
+                                $scope.reservedPhones = [response.data.PhoneNumber];
+                            } else {
+                                $scope.reservedPhones = [];
+                            }
+                        })
+                        .catch(function (error) {
+                            console.error('Error loading reserved phone:', error);
+                        });
+                };
+
+                $scope.handleUnreserveSubmit = function () {
+                    const clientId = document.getElementById('unreserveClientId').value;
+                    $http.post(`/api/Clients/${clientId}/Unreserve`)
+                        .then(function () {
+                            document.getElementById('unreserveModal').style.display = 'none';
+                            fetchClients();
+
+
+                        })
+                        .catch(function (error) {
+                            console.error("Error unreserving client:", error);
+                            alert("Failed to unreserve client. " + JSON.stringify(error));
+                        });
+                };
+
+            })
+            .directive('clientTypeSelector', function () {
+                return {
+                    restrict: 'E',
+                    replace: true,
+                    template: `
+                                      <select ng-model="selectedType" ng-change="updateType()" required class="form-control">
+                                          <option value="">All Types</option>
+                                          <option value="0">Individual</option>
+                                          <option value="1">Organization</option>
+                                      </select>
+                                  `,
+                    scope: {
+                        selectedType: '=',
+                        clientTypeValue: '='
+                    },
+                    link: function (scope, element, attrs) {
+                        const hiddenInput = document.getElementById(attrs.id || 'clientType');
+                        scope.selectedType = attrs.id ? '' : '0';
+                        scope.updateType = function () {
+                            if (hiddenInput) {
+                                hiddenInput.value = scope.selectedType;
+                            }
+                            if (scope.clientTypeValue !== undefined) {
+                                scope.clientTypeValue = scope.selectedType;
+                            }
+                        };
+                        scope.$watch('selectedType', function (newVal) {
+                            if (newVal !== undefined) {
+                                scope.updateType();
+                            }
+                        });
+                        scope.updateType();
+                    }
+                };
+
+            });
+
+    </script>
+    <script>
+        const clientTableBody = document.getElementById('clientTableBody');
+        const noDataMessage = document.getElementById('noDataMessage');
+        const clientModal = document.getElementById('clientModal');
+        const modalTitle = document.getElementById('modalTitle');
+        const clientForm = document.getElementById('clientForm');
+        const clientIdInput = document.getElementById('clientId');
+        const clientNameInput = document.getElementById('clientName');
+        const clientTypeInput = document.getElementById('clientType');
+        const clientBirthDateInput = document.getElementById('clientBirthDate');
+        const closeModalBtn = document.getElementById('closeModal');
+        const addClientBtn = document.getElementById('addClientBtn');
+        const applyFilterButton = document.getElementById('applyFilter');
+        const nameFilterInput = document.getElementById('nameFilter');
+        const clientPhoneNumberInput = document.getElementById('clientPhoneNumber');
+        const clientBEDInput = document.getElementById('clientBED');
+        const clientEEDInput = document.getElementById('clientEED');
+
+        let angularScope;
+        angular.element(document).ready(function () {
+            angularScope = angular.element(document.querySelector('[ng-app="clientApp"]')).scope();
+        });
+
+        document.addEventListener('DOMContentLoaded', fetchClients);
+        addClientBtn.addEventListener('click', () => openModal('add'));
+        closeModalBtn.addEventListener('click', closeModal);
+        clientForm.addEventListener('submit', handleFormSubmit);
+        applyFilterButton.addEventListener('click', filterClients);
+        let currentFilters = {
+            name: '',
+            type: ''
+        };
+
+        async function fetchClients() {
+            try {
+                const response = await fetch('/api/Clients');
+                if (!response.ok) throw new Error('Failed to fetch clients');
+                const clients = await response.json();
+                displayClients(clients);
+            } catch (error) {
+                console.error('Error fetching clients:', error);
+                noDataMessage.style.display = 'block';
+                clientTableBody.innerHTML = '';
+            }
+        }
+
+        function displayClients(clients) {
+            if (clients.length === 0) {
+                noDataMessage.style.display = 'block';
+                clientTableBody.innerHTML = '';
+                return;
+            }
+            noDataMessage.style.display = 'none';
+            clientTableBody.innerHTML = '';
+            clients.forEach(client => {
+                if (matchesFilters(client)) {
+                    const row = document.createElement('tr');
+                    row.innerHTML = `
+                                        <td>${client.Id}</td>
+                                        <td>${client.Name}</td>
+                                        <td>${client.Type === 0 ? 'Individual' : 'Organization'}</td>
+                                        <td>${client.Type === 0 ? (client.BirthDate ? new Date(client.BirthDate).toLocaleDateString() : 'N/A') : ''}</td>
+                                        <td>
+                                            <button class="action-button" onclick="openModal('edit', ${client.Id})">Edit</button>
+                                            <button class="action-button" onclick="deleteClient(${client.Id})">Delete</button>
+                                            <button class="action-button" onclick="openReserveModal(${client.Id})">Reserve</button>
+                                            ${client.EED === null ? `<button class="action-button" onclick="openUnreserveModal(${client.Id})">Unreserve</button>` : ''}
+                                        </td>
+                                    `;
+                    clientTableBody.appendChild(row);
+                }
+            });
+            if (clientTableBody.children.length === 0) {
+                noDataMessage.style.display = 'block';
+            }
+        }
+
+        const reserveModal = document.getElementById('reserveModal');
+        const reserveModalTitle = document.getElementById('reserveModalTitle');
+        const reserveForm = document.getElementById('reserveForm');
+        const reserveClientIdInput = document.getElementById('reserveClientId');
+        const reservePhoneNumberInput = document.getElementById('reservePhoneNumber');
+        const closeReserveModalBtn = document.getElementById('closeReserveModal');
+
+        closeReserveModalBtn.addEventListener('click', closeReserveModal);
+        reserveForm.addEventListener('submit', handleReserveFormSubmit);
+        function openReserveModal(clientId) {
+            reserveModalTitle.textContent = 'Reserve Client';
+            reserveClientIdInput.value = clientId;
+            reservePhoneNumberInput.value = '';
+            reserveModal.style.display = 'block';
+        }
+        function closeReserveModal() {
+            reserveModal.style.display = 'none';
+        }
+
+        async function reserveClient(reserveData) {
+            try {
+                const response = await fetch('/api/Clients/Reserve', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify(reserveData)
+                });
+                if (!response.ok) {
+                    const errorText = await response.text();
+                    throw new Error(errorText || 'Failed to reserve client');
+                }
+                return true;
+            } catch (error) {
+                console.error('Reservation error:', error);
+                if (error.message.includes('Unable to reserve client')) {
+                    alert('This client cannot be reserved. It may already be reserved or the phone number is in use.');
+                } else {
+                    alert('Error reserving client: ' + error.message);
+                }
+                throw error;
+            }
+        }
+
+        async function handleReserveFormSubmit(e) {
+            e.preventDefault();
+            const reserveData = {
+                ClientId: parseInt(reserveClientIdInput.value),
+                PhoneNumber: reservePhoneNumberInput.value
+            };
+            try {
+                await reserveClient(reserveData);
+                closeReserveModal();
+                fetchClients();
+
+            } catch (error) {
+                console.error('Reservation submission error:', error);
+            }
+        }
+        function matchesFilters(client) {
+            const nameMatch = client.Name.toLowerCase().includes(currentFilters.name.toLowerCase()) || currentFilters.name === '';
+            const typeMatch = currentFilters.type === '' || client.Type.toString() === currentFilters.type;
+            return nameMatch && typeMatch;
+        }
+
+        function openModal(action, id = null) {
+            if (action === 'add') {
+                modalTitle.textContent = 'Add New Client';
+                clientForm.reset();
+                clientIdInput.value = '';
+                if (angularScope) {
+                    angularScope.$apply(() => {
+                        angularScope.clientTypeValue = '0';
+                    });
+                }
+            } else if (action === 'edit') {
+                modalTitle.textContent = 'Edit Client';
+                fetchClientDetails(id);
+            }
+            clientModal.style.display = 'block';
+        }
+
+        async function fetchClientDetails(id) {
+            try {
+                const response = await fetch(`/api/Clients/${id}`);
+                if (!response.ok) throw new Error('Failed to fetch client details');
+                const client = await response.json();
+                clientIdInput.value = client.Id;
+                clientNameInput.value = client.Name;
+                if (angularScope) {
+                    angularScope.$apply(() => {
+                        angularScope.clientTypeValue = client.Type.toString();
+                    });
+                }
+                clientBirthDateInput.value = client.BirthDate ? client.BirthDate.split('T')[0] : '';
+            } catch (error) {
+                console.error('Error fetching client details:', error);
+                alert('Error loading client details. Please try again.');
+                closeModal();
+            }
+        }
+
+        function closeModal() {
+            clientModal.style.display = 'none';
+        }
+
+        async function handleFormSubmit(e) {
+            e.preventDefault();
+            const clientData = {
+                Id: clientIdInput.value ? parseInt(clientIdInput.value) : 0,
+                Name: clientNameInput.value.trim(),
+                Type: clientTypeInput.value ? parseInt(clientTypeInput.value) : 0,
+                BirthDate: clientBirthDateInput.value ? new Date(clientBirthDateInput.value).toISOString() : null,
+                PhoneNumber: clientPhoneNumberInput.value?.trim() || null,
+                BED: clientBEDInput.value ? new Date(clientBEDInput.value).toISOString() : null,
+                EED: clientEEDInput.value ? new Date(clientEEDInput.value).toISOString() : null
+            };
+            try {
+                if (clientIdInput.value) {
+                    await updateClient(clientData);
+                } else {
+                    await addClient(clientData);
+                }
+                closeModal();
+                fetchClients();
+            } catch (error) {
+                console.error('Error saving client:', error);
+                alert('Error saving client. Please try again.');
+            }
+        }
+
+        async function addClient(client) {
+            const response = await fetch('/api/Clients', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify(client)
+            });
+            if (!response.ok) throw new Error('Failed to add client');
+        }
+
+        async function updateClient(client) {
+            const response = await fetch('/api/Clients', {
+                method: 'PUT',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify(client)
+            });
+            if (!response.ok) throw new Error('Failed to update client');
+        }
+
+        async function deleteClient(id) {
+            if (confirm('Are you sure you want to delete this client?')) {
+                try {
+                    const response = await fetch(`/api/Clients/${id}`, { method: 'DELETE' });
+                    if (!response.ok) throw new Error('Failed to delete client');
+                    fetchClients();
+                } catch (error) {
+                    console.error('Error deleting client:', error);
+                    alert('Error deleting client.');
+                }
+            }
+        }
+
+        function filterClients() {
+            currentFilters.name = nameFilterInput.value;
+            currentFilters.type = document.getElementById('typeFilter').value;
+            fetchClients();
+        }
+
+        function openUnreserveModal(clientId) {
+            document.getElementById('unreserveClientId').value = clientId;
+            angular.element(document.querySelector('[ng-controller="unreserveController"]')).scope().loadReservedPhones(clientId);
+            document.getElementById('unreserveModal').style.display = 'block';
+        }
+        document.getElementById('closeUnreserveModal').addEventListener('click', function () {
+            document.getElementById('unreserveModal').style.display = 'none';
+        });
+
+        // Add new client
+        async function addClient(client) {
+            const response = await fetch('/api/Clients', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                },
+                body: JSON.stringify(client)
+            });
+
+            if (!response.ok) throw new Error('Failed to add client');
+        }
+
+        // Update existing client
+        async function updateClient(client) {
+            const response = await fetch(`/api/Clients/${client.Id}`, {
+                method: 'PUT',
+                headers: {
+                    'Content-Type': 'application/json',
+                },
+                body: JSON.stringify(client)
+            });
+
+            if (!response.ok) throw new Error('Failed to update client');
+        }
+
+        // Delete client
+        async function deleteClient(id) {
+            if (!confirm('Are you sure you want to delete this client?')) return;
+
+            try {
+                const response = await fetch(`/api/Clients/${id}`, {
+                    method: 'DELETE'
+                });
+
+                if (!response.ok) throw new Error('Failed to delete client');
+                fetchClients(); // Refresh the list
+            } catch (error) {
+                console.error('Error deleting client:', error);
+                alert('Error deleting client. Please try again.');
+            }
+        }
+
+        // Filter clients
+        function filterClients() {
+            currentFilters.name = nameFilterInput.value;
+            currentFilters.type = document.getElementById('typeFilter').value;
+
+            // Re-fetch clients to apply filters
+            fetchClients();
+        }
+        function openUnreserveModal(clientId) {
+            document.getElementById('unreserveClientId').value = clientId;
+            angular.element(document.querySelector('[ng-controller="unreserveController"]')).scope().loadReservedPhones(clientId);
+            document.getElementById('unreserveModal').style.display = 'block';
+        }
+        // Add new client
+        async function addClient(client) {
+            const response = await fetch('/api/Clients', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                },
+                body: JSON.stringify(client)
+            });
+
+            if (!response.ok) throw new Error('Failed to add client');
+        }
+
+        // Update existing client
+        async function updateClient(client) {
+            const response = await fetch(`/api/Clients/${client.Id}`, {
+                method: 'PUT',
+                headers: {
+                    'Content-Type': 'application/json',
+                },
+                body: JSON.stringify(client)
+            });
+
+            if (!response.ok) throw new Error('Failed to update client');
+        }
+
+        // Delete client
+        async function deleteClient(id) {
+            if (!confirm('Are you sure you want to delete this client?')) return;
+
+            try {
+                const response = await fetch(`/api/Clients/${id}`, {
+                    method: 'DELETE'
+                });
+
+                if (!response.ok) throw new Error('Failed to delete client');
+                fetchClients(); // Refresh the list
+            } catch (error) {
+                console.error('Error deleting client:', error);
+                alert('Error deleting client. Please try again.');
+            }
+        }
+
+        // Filter clients
+        function filterClients() {
+            currentFilters.name = nameFilterInput.value;
+            currentFilters.type = document.getElementById('typeFilter').value;
+
+            // Re-fetch clients to apply filters
+            fetchClients();
+        }
+    </script>
+    <div class="container" ng-app="clientApp" ng-controller="reportController">
+        <h1>Clients Per Type Report</h1>
+
+        <div class="filter-container">
+            <client-type-selector id="typeFilter" selected-type="filterTypeValue" client-type-value="selectedType" class="filter-input"></client-type-selector>
+            <button id="applyFilter" class="filter-button" ng-click="applyFilter()">Apply Filter</button>
+
+        </div>
+
+        <table id="clientTable">
+            <thead>
+                <tr>
+                    <th>Type</th>
+                    <th>No. of clients</th>
+                </tr>
+            </thead>
+            <tbody id="clientTableBody">
+                <tr ng-repeat="item in filteredData">
+                    <td>{{ item.type === '0' ? 'Individual' : 'Organization' }}</td>
+                    <td>{{ item.count }}</td>
+                </tr>
+            </tbody>
+        </table>
+
+        <div id="noDataMessage" class="no-data" ng-show="filteredData.length === 0">
+            <p>No clients found matching the criteria.</p>
+        </div>
+    </div>
+
+    <script>
+        angular.module('clientApp')
+            .controller('reportController', function ($scope, $http, ReportService) {
+                $scope.selectedType = ''; // Initialize with no filter
+                $scope.reportData = []; // Will hold our complete report data
+                $scope.filteredData = []; // Will hold filtered data
+
+                // Load initial data
+                $scope.loadReportData = function () {
+                    ReportService.getClientReportData()
+                        .then(function (data) {
+                            $scope.reportData = data;
+                            $scope.applyFilter(); // Apply current filter after loading
+                        })
+                        .catch(function (error) {
+                            console.error('Error loading report data:', error);
+                            $scope.reportData = [];
+                            $scope.filteredData = [];
+                        });
+                };
+
+                // Apply filter button handler
+                $scope.applyFilter = function () {
+                    if ($scope.selectedType) {
+                        $scope.filteredData = $scope.reportData.filter(function (item) {
+                            return item.type === $scope.selectedType;
+                        });
+                    } else {
+                        $scope.filteredData = $scope.reportData;
+                    }
+                };
+
+                // Clear filter button handler
+
+
+                // Initial load
+                $scope.loadReportData();
+            });
+
+        // Angular Service (ReportService.js) - Data Access Layer (DAL)
+        angular.module('clientApp')
+            .service('ReportService', function ($http) {
+                return {
+                    getClientReportData: function () {
+                        return $http.get('/api/Clients/Report')
+                            .then(function (response) {
+                                return response.data;
+                            })
+                            .catch(function (error) {
+                                console.error('Error fetching client report data:', error);
+                                throw error;
+                            });
+                    }
+                };
+            });
+    </script>
+
+
+</body>
+</html>
+using System;
+using System.Collections.Generic;
+using System.Configuration;
+using System.Data.SqlClient;
+using System.Linq;
+using WebApplication1.Models;
+
+namespace WebApplication1.DAL
+{
+    public class ClientsDAL
+    {
+        private string connectionString;
+
+        public ClientsDAL()
+        {
+            var connectionStringSettings = ConfigurationManager.ConnectionStrings["ClientDBConnection"];
+            if (connectionStringSettings == null)
+            {
+                throw new Exception("Connection string 'DefaultConnection' not found in Web.config.");
+            }
+            connectionString = connectionStringSettings.ConnectionString;
+        }
+
+        public List<Clients>
+    GetAllClients()
+    {
+    List<Clients>
+        clients = new List<Clients>
+            ();
+            try
+            {
+            using (SqlConnection connection = new SqlConnection(connectionString))
+            {
+            connection.Open();
+            string selectSql = "SELECT Id, Name, Type, BirthDate, PhoneNumber, BED, EED FROM Client";
+            using (SqlCommand selectCmd = new SqlCommand(selectSql, connection))
+            {
+            using (SqlDataReader reader = selectCmd.ExecuteReader())
+            {
+            while (reader.Read())
+            {
+            var client = new Clients
+            {
+            Id = (int)reader["Id"],
+            Name = reader["Name"].ToString(),
+            Type = (ClientsType)(int)reader["Type"],
+            BirthDate = reader["Birthdate"] == DBNull.Value ? (DateTime?)null : (DateTime)reader["Birthdate"],
+            PhoneNumber = reader["PhoneNumber"].ToString(),
+            BED = reader["BED"] == DBNull.Value ? (DateTime?)null : (DateTime)reader["BED"]
+            };
+
+            // Special handling for EED to properly detect NULL
+            if (reader["EED"] == DBNull.Value ||
+            (DateTime)reader["EED"] == DateTime.MinValue)
+            {
+            client.EED = null;
+            }
+            else
+            {
+            client.EED = (DateTime)reader["EED"];
+            }
+
+            clients.Add(client);
+            }
+            }
+            }
+            }
+            }
+            catch (Exception ex)
+            {
+            Console.WriteLine(ex.Message);
+            }
+            return clients;
+            }
+            public Clients AddClient(Clients client)
+            {
+            using (SqlConnection connection = new SqlConnection(connectionString))
+            {
+            string sql = @"INSERT INTO Client (Name, Type, BirthDate, PhoneNumber, BED, EED)
+            OUTPUT INSERTED.Id
+            VALUES (@Name, @Type, @BirthDate, @PhoneNumber, @BED, @EED)";
+
+            using (SqlCommand command = new SqlCommand(sql, connection))
+            {
+            command.Parameters.AddWithValue("@Name", client.Name);
+            command.Parameters.AddWithValue("@Type", client.Type);
+
+            // Proper null handling for all datetime fields
+            command.Parameters.AddWithValue("@BirthDate",
+            client.BirthDate.HasValue ? (object)client.BirthDate.Value : DBNull.Value);
+
+            command.Parameters.AddWithValue("@PhoneNumber",
+            string.IsNullOrEmpty(client.PhoneNumber) ? DBNull.Value : (object)client.PhoneNumber);
+
+            command.Parameters.AddWithValue("@BED",
+            client.BED.HasValue ? (object)client.BED.Value : DBNull.Value);
+            command.Parameters.AddWithValue("@EED",
+            client.EED.HasValue && client.EED.Value > DateTime.MinValue
+            ? (object)client.EED.Value
+            : DBNull.Value);
+            connection.Open();
+            client.Id = Convert.ToInt32(command.ExecuteScalar() ?? 0);
+            if (client.Id == 0) throw new Exception("Failed to insert client.");
+            }
+
+            }
+
+            return client;
+            }
+
+            public bool UpdateClient(Clients client)
+            {
+            using (SqlConnection connection = new SqlConnection(connectionString))
+            {
+            string sql = @"UPDATE Client
+            SET Name = @Name,
+            Type = @Type,
+            BirthDate = @BirthDate,
+            PhoneNumber = @PhoneNumber,
+            BED = @BED,
+            EED = @EED
+            WHERE Id = @Id";
+
+            using (SqlCommand command = new SqlCommand(sql, connection))
+            {
+            command.Parameters.AddWithValue("@Name", client.Name);
+            command.Parameters.AddWithValue("@Type", client.Type);
+
+            // Proper null handling for DateTime? fields
+            command.Parameters.AddWithValue("@BirthDate",
+            client.BirthDate.HasValue ? (object)client.BirthDate.Value : DBNull.Value);
+
+            command.Parameters.AddWithValue("@PhoneNumber",
+            string.IsNullOrEmpty(client.PhoneNumber) ? DBNull.Value : (object)client.PhoneNumber);
+
+            command.Parameters.AddWithValue("@BED",
+            client.BED.HasValue ? (object)client.BED.Value : DBNull.Value);
+
+            command.Parameters.AddWithValue("@EED",
+            client.EED.HasValue && client.EED.Value > DateTime.MinValue
+            ? (object)client.EED.Value
+            : DBNull.Value);
+
+            command.Parameters.AddWithValue("@Id", client.Id);
+
+            connection.Open();
+            int rowsAffected = command.ExecuteNonQuery();
+            return rowsAffected > 0;
+            }
+            }
+            }
+            public bool DeleteClient(int clientId)
+            {
+            using (SqlConnection connection = new SqlConnection(connectionString))
+            {
+            string sql = "DELETE FROM Client WHERE Id = @Id";
+            using (SqlCommand command = new SqlCommand(sql, connection))
+            {
+            command.Parameters.AddWithValue("@Id", clientId);
+            connection.Open();
+            int rowsAffected = command.ExecuteNonQuery();
+            return rowsAffected > 0;
+            }
+            }
+            }
+
+            public Clients GetClientById(int id)
+            {
+            using (SqlConnection connection = new SqlConnection(connectionString))
+            {
+            string sql = "SELECT * FROM Client WHERE Id = @Id";
+            using (SqlCommand command = new SqlCommand(sql, connection))
+            {
+            command.Parameters.AddWithValue("@Id", id);
+            connection.Open();
+
+            using (SqlDataReader reader = command.ExecuteReader())
+            {
+            if (reader.Read())
+            {
+            return new Clients
+            {
+            Id = Convert.ToInt32(reader["Id"]),
+            Name = reader["Name"].ToString(),
+            Type = (ClientsType)reader.GetInt32(reader.GetOrdinal("Type")),
+            BirthDate = reader["BirthDate"] != DBNull.Value ?
+            Convert.ToDateTime(reader["BirthDate"]) : DateTime.MinValue,
+            PhoneNumber = reader["PhoneNumber"] != DBNull.Value ?
+            reader["PhoneNumber"].ToString() : null,
+            BED = reader["BED"] == DBNull.Value ? (DateTime?)null : (DateTime)reader["BED"],
+            EED = reader["EED"] == DBNull.Value || (DateTime)reader["EED"] == DateTime.MinValue
+            ? (DateTime?)null
+            : (DateTime)reader["EED"]
+            };
+            }
+            }
+            }
+            }
+            return null;
+            }
+
+            public bool ReserveClient(int clientId, string phoneNumber)
+            {
+            try
+            {
+            using (SqlConnection connection = new SqlConnection(connectionString))
+            {
+            connection.Open();
+
+            // 1. Check if phone number is already reserved
+            string checkSql = "SELECT COUNT(*) FROM Client WHERE PhoneNumber = @PhoneNumber AND EED IS NULL";
+            using (SqlCommand checkCmd = new SqlCommand(checkSql, connection))
+            {
+            checkCmd.Parameters.AddWithValue("@PhoneNumber", phoneNumber);
+            int count = (int)checkCmd.ExecuteScalar();
+            if (count > 0)
+            {
+            return false; // Phone number already reserved
+            }
+            }
+
+            // 2. Get existing client data
+            string selectSql = "SELECT Name, Type, Birthdate FROM Client WHERE Id = @Id";
+            string name = "";
+            string type = "";
+            DateTime birthdate = DateTime.MinValue;
+
+            using (SqlCommand selectCmd = new SqlCommand(selectSql, connection))
+            {
+            selectCmd.Parameters.AddWithValue("@Id", clientId);
+            using (SqlDataReader reader = selectCmd.ExecuteReader())
+            {
+            if (reader.Read())
+            {
+            name = reader["Name"].ToString();
+            type = reader["Type"].ToString();
+            birthdate = (DateTime)reader["Birthdate"];
+            }
+            else
+            {
+            return false; // Client not found
+            }
+            }
+            }
+
+            // 3. Insert new record
+            string insertSql = @"
+            INSERT INTO Client (Name, Type, Birthdate, PhoneNumber, BED, EED)
+            VALUES (@Name, @Type, @Birthdate, @PhoneNumber, @BED, @EED)";
+
+            using (SqlCommand insertCmd = new SqlCommand(insertSql, connection))
+            {
+            insertCmd.Parameters.AddWithValue("@Name", name);
+            insertCmd.Parameters.AddWithValue("@Type", type);
+            insertCmd.Parameters.AddWithValue("@Birthdate", birthdate);
+            insertCmd.Parameters.AddWithValue("@PhoneNumber", phoneNumber);
+            insertCmd.Parameters.AddWithValue("@BED", DateTime.Now);
+            insertCmd.Parameters.AddWithValue("@EED", DBNull.Value);
+
+            int rowsAffected = insertCmd.ExecuteNonQuery();
+            return rowsAffected > 0;
+            }
+            }
+            }
+            catch (SqlException ex)
+            {
+            // Log the SQL exception
+            Console.WriteLine($"SQL Error: {ex.Message}");
+            return false;
+            }
+            catch (Exception ex)
+            {
+            // Log other exceptions
+            Console.WriteLine($"General Error: {ex.Message}");
+            return false;
+            }
+            }
+
+
+            public bool UnreserveClient(int clientId)
+            {
+            using (SqlConnection connection = new SqlConnection(connectionString))
+            {
+            // Only update EED to current date/time for currently reserved clients
+            string sql = @"UPDATE Client
+            SET EED = @CurrentDate
+            WHERE Id = @Id AND EED IS NULL";
+
+            using (SqlCommand command = new SqlCommand(sql, connection))
+            {
+            command.Parameters.AddWithValue("@Id", clientId);
+            command.Parameters.AddWithValue("@CurrentDate", DateTime.Now);
+
+            connection.Open();
+            int rowsAffected = command.ExecuteNonQuery();
+            return rowsAffected > 0;
+            }
+            }
+            }
+            public List<ClientTypeCount>
+                GetClientCountsByType(string type)
+                {
+                List<ClientTypeCount>
+                    result = new List<ClientTypeCount>
+    ();
+
+    using (SqlConnection connection = new SqlConnection(connectionString))
+    {
+    // Build the SQL query based on whether we're filtering or not
+    string sql;
+    if (string.IsNullOrEmpty(type))
+    {
+    sql = "SELECT Type, COUNT(*) AS Count FROM Client GROUP BY Type";
+    }
+    else
+    {
+    sql = "SELECT Type, COUNT(*) AS Count FROM Client WHERE Type = @type GROUP BY Type";
+    }
+
+    using (SqlCommand command = new SqlCommand(sql, connection))
+    {
+    // Add parameter if we're filtering
+    if (!string.IsNullOrEmpty(type))
+    {
+    command.Parameters.AddWithValue("@type", type);
+    }
+
+    connection.Open();
+    using (SqlDataReader reader = command.ExecuteReader())
+    {
+    while (reader.Read())
+    {
+    result.Add(new ClientTypeCount
+    {
+    Type = reader["Type"].ToString(),
+    Count = Convert.ToInt32(reader["Count"])
+    });
+    }
+    }
+    }
+    }
+
+    // Ensure both types are represented if no filter was applied
+    if (string.IsNullOrEmpty(type))
+    {
+    if (!result.Any(r => r.Type == "0"))
+    {
+    result.Add(new ClientTypeCount { Type = "0", Count = 0 });
+    }
+    if (!result.Any(r => r.Type == "1"))
+    {
+    result.Add(new ClientTypeCount { Type = "1", Count = 0 });
+    }
+    }
+
+    return result;
+    }
+
+    public class ClientTypeCount
+    {
+    public string Type { get; set; }
+    public int Count { get; set; }
+    }
+    }
+    }
+    using System;
+
+    namespace WebApplication1.Models
+    {
+    public enum ClientsType
+    {
+    Individual,
+    Organization
+    }
+
+    public class Clients
+    {
+    public int Id { get; set; }
+    public string Name { get; set; }
+    public ClientsType Type { get; set; }
+    public DateTime? BirthDate { get; set; } // Nullable DateTime
+    public string PhoneNumber { get; set; }
+    public DateTime? BED { get; set; }
+    public DateTime? EED { get; set; }
+    }
+    }
+    public class ReserveClientRequest
+    {
+    public int ClientId { get; set; }
+    public string PhoneNumber { get; set; }
+    }
+    using System;
+    using System.Collections.Generic;
+    using System.Linq;
+    using System.Net;
+    using System.Net.Http;
+    using System.Web.Http;
+    using WebApplication1.DAL;
+    using WebApplication1.Models;
+
+    namespace WebApplication1.Controllers
+    {
+    [RoutePrefix("api/Clients")]
+    public class ClientsController : ApiController
+    {
+    private ClientsDAL clientsDAL = new ClientsDAL();
+
+    // GET: api/Clients
+    [HttpGet]
+    [Route("")]
+    public IHttpActionResult GetAllClients()
+    {
+    try
+    {
+    List<Clients>
+        clients = clientsDAL.GetAllClients();
+        return Ok(clients);
+        }
+        catch (Exception ex)
+        {
+        return InternalServerError(ex);
+        }
+        }
+
+        // POST: api/Clients
+        [HttpPost]
+        [Route("")]
+        public IHttpActionResult AddClient([FromBody] Clients client)
+        {
+        if (client == null)
+        {
+        return BadRequest("Client data is required");
+        }
+
+        if (!ModelState.IsValid)
+        {
+        return BadRequest(ModelState);
+        }
+
+        try
+        {
+        var createdClient = clientsDAL.AddClient(client);
+        return Created($"api/Clients/{createdClient.Id}", createdClient);
+        }
+        catch (Exception ex)
+        {
+        return InternalServerError(ex);
+        }
+        }
+
+        // PUT: api/Clients/{id}
+        [HttpPut]
+        [Route("{id:int}")]
+        public IHttpActionResult UpdateClient(int id, [FromBody] Clients client)
+        {
+        if (client == null)
+        {
+        return BadRequest("Client data is required");
+        }
+
+        if (!ModelState.IsValid)
+        {
+        return BadRequest(ModelState);
+        }
+
+        if (id != client.Id)
+        {
+        return BadRequest("ID mismatch");
+        }
+
+        try
+        {
+        bool updated = clientsDAL.UpdateClient(client);
+        if (!updated)
+        {
+        return NotFound();
+        }
+        return Ok(client);
+        }
+        catch (Exception ex)
+        {
+        return InternalServerError(ex);
+        }
+        }
+
+        // DELETE: api/Clients/{id}
+        [HttpDelete]
+        [Route("{id:int}")]
+        public IHttpActionResult DeleteClient(int id)
+        {
+        try
+        {
+        bool deleted = clientsDAL.DeleteClient(id);
+        if (!deleted)
+        {
+        return NotFound();
+        }
+        return Ok();
+        }
+        catch (Exception ex)
+        {
+        return InternalServerError(ex);
+        }
+        }
+
+        // GET: api/Clients/{id}
+        [HttpGet]
+        [Route("{id:int}")]
+        public IHttpActionResult GetClient(int id)
+        {
+        try
+        {
+        Clients client = clientsDAL.GetClientById(id);
+        if (client == null)
+        {
+        return NotFound();
+        }
+
+        return Ok(client);
+        }
+        catch (Exception ex)
+        {
+        return InternalServerError(ex);
+        }
+        }
+
+        // POST: api/Clients/Reserve
+        [HttpPost]
+        [Route("Reserve")]
+        public IHttpActionResult ReserveClient([FromBody] ReserveClientRequest request)
+        {
+        if (request == null)
+        {
+        return BadRequest("Reservation data is required");
+        }
+
+        if (string.IsNullOrWhiteSpace(request.PhoneNumber))
+        {
+        return BadRequest("Phone number is required");
+        }
+
+        try
+        {
+        bool reservationResult = clientsDAL.ReserveClient(request.ClientId, request.PhoneNumber);
+
+        if (reservationResult)
+        {
+        return Ok();
+        }
+        else
+        {
+        return BadRequest("Unable to reserve client. The phone number is already in use.");
+        }
+        }
+        catch (Exception ex)
+        {
+        // Log the exception
+        return InternalServerError(ex);
+        }
+        }
+
+
+        // POST: api/Clients/{id}/Unreserve
+        [HttpPost]
+        [Route("{id:int}/Unreserve")]
+        public IHttpActionResult UnreserveClient(int id)
+        {
+        try
+        {
+        bool unreservationResult = clientsDAL.UnreserveClient(id);
+
+        if (unreservationResult)
+        {
+        return Ok();
+        }
+        else
+        {
+        return BadRequest("Unable to unreserve client. The client may not be currently reserved.");
+        }
+        }
+        catch (Exception ex)
+        {
+        // Log the exception
+        return InternalServerError(ex);
+        }
+        }
+        // GET: api/Clients/Report
+        [HttpGet]
+        [Route("Report")]
+        public IHttpActionResult GetClientTypeReport(string type = null)
+        {
+        try
+        {
+        // Get counts directly from the database
+        var reportData = clientsDAL.GetClientCountsByType(type);
+
+        // If no filter, ensure both types are represented even if count is zero
+        if (string.IsNullOrEmpty(type))
+        {
+        var allTypes = new List<dynamic>
+    {
+    new { type = "0", count = reportData.FirstOrDefault(r => r.Type == "0")?.Count ?? 0 },
+    new { type = "1", count = reportData.FirstOrDefault(r => r.Type == "1")?.Count ?? 0 }
+    };
+    return Ok(allTypes);
+    }
+
+    // If filtering, return just the filtered type
+    return Ok(reportData);
+    }
+    catch (Exception ex)
+    {
+    return InternalServerError(ex);
+    }
+    }
+
+
+    // DTO for Reservation Request
+    public class ReserveClientRequest
+    {
+    public int ClientId { get; set; }
+    public string PhoneNumber { get; set; }
+    }
+    }
+    }
+    using System;
+    using System.Collections.Generic;
+    using System.Configuration;
+    using System.Data.SqlClient;
+    using WebApplication1.Models;
+
+    namespace WebApplication1.DAL
+    {
+    public class ReservationDAL
+    {
+    private string connectionString;
+
+    public ReservationDAL()
+    {
+    // Retrieve the connection string from Web.config
+    var connectionStringSettings = ConfigurationManager.ConnectionStrings["ClientDBConnection"];
+    if (connectionStringSettings == null)
+    {
+    throw new Exception("Connection string 'ClientDBConnection' not found in Web.config.");
+    }
+    connectionString = connectionStringSettings.ConnectionString;
+    }
+
+    public List<Reservation>
+        GetAllReservations()
+        {
+        List<Reservation>
+            reservations = new List<Reservation>
+    ();
+    try
+    {
+    using (SqlConnection connection = new SqlConnection(connectionString))
+    {
+    string query = @"SELECT Id, Name, PhoneNumber, BED, EED FROM Client";
+    SqlCommand command = new SqlCommand(query, connection);
+    connection.Open();
+    using (SqlDataReader reader = command.ExecuteReader())
+    {
+    while (reader.Read())
+    {
+    // Add debug statements to check reader values
+    Console.WriteLine($"ID: {reader["ID"]}, Name: {reader["Name"]}");
+
+    Reservation reservation = new Reservation
+    {
+    ID = Convert.ToInt32(reader["Id"]),
+    Name = reader["Name"].ToString(),
+
+    PhoneNumber = reader["PhoneNumber"] != DBNull.Value ?
+    reader["PhoneNumber"].ToString() : null,
+    BED = reader["BED"] != DBNull.Value ?
+    Convert.ToDateTime(reader["BED"]) : DateTime.MinValue,
+    EED = reader["EED"] != DBNull.Value ?
+    Convert.ToDateTime(reader["EED"]) : DateTime.MinValue
+    };
+    reservations.Add(reservation); // Add this line
+    }
+    }
+    }
+    }
+
+
+    catch (Exception ex)
+    {
+    Console.WriteLine($"Database error: {ex.Message}"); // Log detailed error
+    throw; // Re-throw the exception
+    }
+    return reservations;
+    }
+    }
+    }
+    using System;
+    using System.Collections.Generic;
+    using System.Web.Http;
+    using WebApplication1.DAL;
+    using WebApplication1.Models;
+
+    namespace WebApplication1.Controllers
+    {
+    [RoutePrefix("api/phones")]
+    public class PhonesController : ApiController
+    {
+    private PhonesDAL phonesDAL = new PhonesDAL();
+
+    // GET: api/phones
+    [HttpGet]
+    [Route("")]
+    public IHttpActionResult GetAllPhones()
+    {
+    try
+    {
+    List<Phones>
+        phones = phonesDAL.GetAllPhoneNumbers();
+        return Ok(phones);
+        }
+        catch (Exception ex)
+        {
+        return InternalServerError(ex);
+        }
+        }
+
+
+
+        // POST: api/phones
+        [HttpPost]
+        [Route("")]
+        public IHttpActionResult AddPhone([FromBody] Phones phone)
+        {
+        if (phone == null)
+        {
+        return BadRequest("Phone data is required");
+        }
+
+        if (!ModelState.IsValid)
+        {
+        return BadRequest(ModelState);
+        }
+
+        try
+        {
+        // You'll need to add a method in PhoneDAL to add a phone
+        int newPhoneId = phonesDAL.AddPhone(phone);
+
+        // Return the created phone with its new ID
+        return Created($"api/phones/{newPhoneId}", phone);
+        }
+        catch (Exception ex)
+        {
+        return InternalServerError(ex);
+        }
+        }
+
+        // PUT: api/phones/{id}
+        [HttpPut]
+        [Route("{id:int}")]
+        public IHttpActionResult UpdatePhone(int id, [FromBody] Phones phone)
+        {
+        if (phone == null)
+        {
+        return BadRequest("Phone data is required");
+        }
+
+        if (!ModelState.IsValid)
+        {
+        return BadRequest(ModelState);
+        }
+
+        if (id != phone.Id)
+        {
+        return BadRequest("ID mismatch");
+        }
+
+        try
+        {
+        // You'll need to add a method in PhoneDAL to update a phone
+        bool updated = phonesDAL.UpdatePhone(phone);
+
+        if (!updated)
+        {
+        return NotFound();
+        }
+
+        return Ok(phone);
+        }
+        catch (Exception ex)
+        {
+        return InternalServerError(ex);
+        }
+        }
+
+        // DELETE: api/phones/{id}
+        [HttpDelete]
+        [Route("{id:int}")]
+        public IHttpActionResult DeletePhone(int id)
+        {
+        try
+        {
+        // You'll need to add a method in PhoneDAL to delete a phone
+        bool deleted = phonesDAL.DeletePhone(id);
+
+        if (!deleted)
+        {
+        return NotFound();
+        }
+
+        return Ok();
+        }
+        catch (Exception ex)
+        {
+        return InternalServerError(ex);
+        }
+        }
+        // GET: api/phones/{id}
+        [HttpGet]
+        [Route("{id:int}")]
+        public IHttpActionResult GetPhone(int id)
+        {
+        try
+        {
+        Phones phone = phonesDAL.GetPhoneById(id);
+
+        if (phone == null)
+        {
+        return NotFound();
+        }
+
+        return Ok(phone);
+        }
+        catch (Exception ex)
+        {
+        return InternalServerError(ex);
+        }
+        }
+
+        }
+        }

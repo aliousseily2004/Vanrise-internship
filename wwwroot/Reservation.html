@@ -1,0 +1,224 @@
+﻿<!DOCTYPE html>
+<html>
+<head>
+    <meta charset="utf-8" />
+    <title>Reservation Management</title>
+    <script src="https://ajax.googleapis.com/ajax/libs/angularjs/1.8.2/angular.min.js"></script>
+
+    <style>
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            margin: 20px;
+            background-color: #f4f4f4;
+            color: #333;
+        }
+
+        h1 {
+            color: #007bff;
+            text-align: center;
+            margin-bottom: 20px;
+        }
+
+        table {
+            width: 100%;
+            border-collapse: collapse;
+            margin-top: 20px;
+            background-color: white;
+            box-shadow: 0 2px 5px rgba(0, 0, 0, 0.1);
+        }
+
+        th, td {
+            border: 1px solid #ddd;
+            padding: 12px 15px;
+            text-align: left;
+        }
+
+        th {
+            background-color: #f2f2f2;
+            position: sticky;
+            top: 0;
+            font-weight: 600;
+        }
+
+        tr:nth-child(even) {
+            background-color: #f9f9f9;
+        }
+
+        tr:hover {
+            background-color: #e0f7fa;
+        }
+
+        .loading {
+            text-align: center;
+            padding: 30px;
+            font-size: 1.2em;
+            color: #777;
+        }
+
+        .filter-container {
+            margin-bottom: 25px;
+            display: flex;
+            flex-wrap: wrap;
+            gap: 15px;
+            align-items: center;
+            background-color: white;
+            padding: 20px;
+            border-radius: 8px;
+            box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+        }
+
+            .filter-container label {
+                font-weight: 600;
+                margin-right: 8px;
+            }
+
+        .scrollable-select {
+            max-height: 150px;
+            overflow-y: auto;
+            border: 1px solid #ccc;
+            padding: 8px;
+            display: inline-block;
+            min-width: 180px;
+            border-radius: 4px;
+        }
+
+            .scrollable-select option {
+                padding: 8px;
+            }
+
+        .filter-container button {
+            background-color: #007bff;
+            color: white;
+            padding: 10px 15px;
+            border: none;
+            border-radius: 4px;
+            cursor: pointer;
+            transition: background-color 0.3s ease;
+        }
+
+            .filter-container button:hover {
+                background-color: #0056b3;
+            }
+
+        nav {
+            background-color: #2c3e50; /* Dark blue-gray background */
+            padding: 10px 20px;
+            display: flex;
+            gap: 20px;
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+        }
+
+            nav a {
+                color: #ecf0f1; /* Light gray text */
+                text-decoration: none;
+                font-weight: 600;
+                padding: 8px 12px;
+                border-radius: 4px;
+                transition: background-color 0.3s ease, color 0.3s ease;
+            }
+
+                nav a:hover,
+                nav a:focus {
+                    background-color: #3498db; /* Bright blue on hover */
+                    color: white;
+                    outline: none;
+                }
+
+                nav a:active {
+                    background-color: #2980b9; /* Darker blue on click */
+                    color: white;
+                }
+        
+ 
+    
+    </style>
+</head>
+
+<body ng-app="reservationApp" ng-controller="reservationController">
+
+    <nav>
+        <a href="Device.html">Device</a>
+        <a href="Phone.html">Phone</a>
+        <a href="clients.html">Clients</a>
+        <a href="Reservation.html">Reservation</a>
+        <a href="PhoneNumbersReport.html">Phone Numbers Report</a>
+    </nav>
+    <h1>Reservation Management</h1>
+   
+    <div class="filter-container">
+        <label for="clientSelect">Filter by Client:</label>
+        <select id="clientSelect" ng-model="selectedClient" class="scrollable-select">
+            <option value="">All Clients</option>
+            <option ng-repeat="client in uniqueClients" value="{{client}}">{{client}}</option>
+        </select>
+
+        <label for="phoneSelect">Filter by Phone:</label>
+        <select id="phoneSelect" ng-model="selectedPhone" class="scrollable-select">
+            <option value="">All Phones</option>
+            <option ng-repeat="phone in uniquePhones" value="{{phone}}">{{phone}}</option>
+        </select>
+
+        <button ng-click="applyFilters()">Search</button>
+    </div>
+
+    <div id="loading" class="loading">Loading reservations...</div>
+
+    <table id="reservationsTable" style="display: none;">
+        <thead>
+            <tr>
+                <th>ID</th>
+                <th>Client</th>
+                <th>Phone Number</th>
+                <th>Begin Effective Date (BED)</th>
+                <th>End Effective Date (EED)</th>
+            </tr>
+        </thead>
+        <tbody id="reservationsBody">
+            <tr ng-repeat="reservation in filteredReservations">
+                <td>{{ reservation.ID }}</td>
+                <td>{{ reservation.Name }}</td>
+                <td>{{ reservation.PhoneNumber }}</td>
+                <td>{{ reservation.BED | date:'yyyy-MM-dd' }}</td>
+                <td>{{ reservation.EED | date:'yyyy-MM-dd' }}</td>
+            </tr>
+        </tbody>
+    </table>
+
+    <script>
+        angular.module('reservationApp', [])
+            .controller('reservationController', function ($scope, $http) {
+                $scope.reservations = [];
+                $scope.uniqueClients = [];
+                $scope.uniquePhones = [];
+                $scope.selectedClient = '';
+                $scope.selectedPhone = '';
+                $scope.filteredReservations = [];
+
+                $scope.applyFilters = function () {
+                    $scope.filteredReservations = $scope.reservations.filter(function (reservation) {
+                        var clientMatch = !$scope.selectedClient || reservation.Name === $scope.selectedClient; // Use reservation.Name
+                        var phoneMatch = !$scope.selectedPhone || reservation.PhoneNumber === $scope.selectedPhone;
+                        return clientMatch && phoneMatch;
+                    });
+                };
+
+                $http.get('/api/reservations')
+                    .then(function (response) {
+                        $scope.reservations = response.data;
+                        $scope.filteredReservations = response.data; // Initially show all.
+
+                        // Populate unique clients and phones
+                        $scope.uniqueClients = [...new Set($scope.reservations.map(item => item.Name))]; // Use item.Name for clients
+                        $scope.uniquePhones = [...new Set($scope.reservations.map(item => item.PhoneNumber))]; // Use item.PhoneNumber for phones
+
+                        document.getElementById('loading').style.display = 'none';
+                        document.getElementById('reservationsTable').style.display = 'table';
+                    })
+                    .catch(function (error) {
+                        console.error('Error:', error);
+                        document.getElementById('loading').textContent = 'Error loading reservations. Please check console (F12) for details.';
+                    });
+            });
+    </script>
+</body>
+</html>

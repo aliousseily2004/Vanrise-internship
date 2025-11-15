@@ -1,0 +1,146 @@
+﻿<!DOCTYPE html>
+<html ng-app="loginApp">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    
+    <title>Login</title>
+    <script src="https://ajax.googleapis.com/ajax/libs/angularjs/1.8.2/angular.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/crypto-js/4.1.1/crypto-js.min.js"></script>
+    <style>
+        body {
+            font-family: sans-serif;
+            background-color: #f4f4f4;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            min-height: 100vh;
+            margin: 0;
+        }
+
+        .login-container {
+            background-color: #fff;
+            padding: 30px;
+            border-radius: 8px;
+            box-shadow: 0 0 10px rgba(0, 0, 0, 0.1);
+            width: 300px;
+        }
+
+        h1 {
+            text-align: center;
+            color: #333;
+            margin-bottom: 20px;
+        }
+
+        div {
+            margin-bottom: 15px;
+        }
+
+        label {
+            display: block;
+            margin-bottom: 5px;
+            color: #555;
+            font-weight: bold;
+        }
+
+        input[type="text"],
+        input[type="password"] {
+            width: calc(100% - 12px);
+            padding: 8px;
+            border: 1px solid #ccc;
+            border-radius: 4px;
+            box-sizing: border-box;
+            font-size: 16px;
+        }
+
+        button[type="submit"] {
+            background-color: #007bff;
+            color: white;
+            padding: 10px 15px;
+            border: none;
+            border-radius: 4px;
+            cursor: pointer;
+            font-size: 16px;
+            width: 100%;
+        }
+
+            button[type="submit"]:hover {
+                background-color: #0056b3;
+            }
+
+        .error-message {
+            color: red;
+            margin-top: 10px;
+            text-align: center;
+        }
+
+        .success-message {
+            color: green;
+            margin-top: 10px;
+            text-align: center;
+        }
+    </style>
+</head>
+<body ng-controller="loginController">
+    <div class="login-container">
+        <h1>Login</h1>
+        <form ng-submit="login()">
+            <div>
+                <label for="username">Username:</label>
+                <input type="text" id="username" ng-model="loginData.username" required>
+            </div>
+            <div>
+                <label for="password">Password:</label>
+                <input type="password" id="password" ng-model="loginData.password" required>
+            </div>
+            <button type="submit">Login</button>
+            <div ng-if="errorMessage" class="error-message">{{ errorMessage }}</div>
+        </form>
+    </div>
+    <script>
+        angular.module('loginApp', [])
+            .controller('loginController', ['$scope', '$http', '$window', function ($scope, $http, $window) {
+                $scope.loginData = {};
+                $scope.errorMessage = '';
+                $scope.users = []; // Array to hold user data
+
+                // Function to fetch users from the database
+                $scope.fetchUsers = function () {
+                    $http.get('/api/Auth/users')
+                        .then(function (response) {
+                            $scope.users = response.data; // Store the user data
+                        })
+                        .catch(function (error) {
+                            console.error('Error fetching users:', error);
+                        });
+                };
+
+                $scope.login = function () {
+                    // Hash the password using SHA-256
+                    const hashedPassword = CryptoJS.SHA256($scope.loginData.password).toString();
+
+                    // Create payload with hashed password
+                    const loginPayload = {
+                        Username: $scope.loginData.username, // Note: Capital U
+                        Password: hashedPassword
+                    };
+                    console.log(hashedPassword);
+                    $http.post('/api/Auth/login', loginPayload)
+                        .then(function (response) {
+                            if (response.data.isAuthenticated) {
+                                $window.location.href = '/wwwroot/Clients.html'; // Redirect on success
+                            } else {
+                                $scope.errorMessage = 'Invalid username or password';
+                            }
+                        })
+                        .catch(function (error) {
+                            $scope.errorMessage = 'Invalid username or password';
+                        });
+                };
+
+                // Call fetchUsers when the controller is initialized
+                $scope.fetchUsers();
+            }]);
+    </script>
+</body>
+</html>

@@ -1,0 +1,174 @@
+﻿<!DOCTYPE html>
+<html ng-app="phoneReportApp">
+<head>
+    <meta charset="utf-8" />
+    <script src="https://ajax.googleapis.com/ajax/libs/angularjs/1.8.2/angular.min.js"></script>
+    <title>Phone Numbers Report</title>
+    <style>
+        /* General Styles */
+        body {
+            font-family: Arial, sans-serif;
+            background-color: #f4f4f4;
+            margin: 0;
+            padding: 20px;
+        }
+
+        .container {
+            max-width: 800px;
+            margin: auto;
+            background: white;
+            padding: 20px;
+            border-radius: 8px;
+            box-shadow: 0 2px 10px rgba(0, 0, 0, 0.1);
+        }
+
+        /* Header Styles */
+        h1 {
+            text-align: center;
+            color: #333;
+        }
+
+        /* Navigation Bar Styles */
+        nav {
+            background-color: #2c3e50; /* Dark blue-gray background */
+            padding: 10px 20px;
+            display: flex;
+            gap: 20px;
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+        }
+
+            nav a {
+                color: #ecf0f1; /* Light gray text */
+                text-decoration: none;
+                font-weight: 600;
+                padding: 8px 12px;
+                border-radius: 4px;
+                transition: background-color 0.3s ease, color 0.3s ease;
+            }
+
+                nav a:hover,
+                nav a:focus {
+                    background-color: #3498db; /* Bright blue on hover */
+                    color: white;
+                    outline: none;
+                }
+
+                nav a:active {
+                    background-color: #2980b9; /* Darker blue on click */
+                    color: white;
+                }
+
+        /* Filter Container Styles */
+        .filter-container {
+            display: flex;
+            justify-content: space-between;
+            margin-bottom: 20px;
+        }
+
+        .filter-input {
+            width: 48%;
+            padding: 10px;
+            border: 1px solid #ccc;
+            border-radius: 4px;
+            font-size: 16px;
+        }
+
+        /* Table Styles */
+        table {
+            width: 100%;
+            border-collapse: collapse;
+            margin-top: 20px;
+        }
+
+        th, td {
+            padding: 12px;
+            text-align: left;
+            border-bottom: 1px solid #ddd;
+        }
+
+        th {
+            background-color: #4CAF50;
+            color: white;
+        }
+
+        tr:hover {
+            background-color: #f1f1f1;
+        }
+
+        /* No Data Message Styles */
+        .no-data {
+            text-align: center;
+            color: #ff0000;
+            margin-top: 20px;
+            font-size: 18px;
+        }
+    </style>
+</head>
+
+<body ng-controller="ReportController">
+    <div class="container">
+        <nav>
+            <a href="Device.html">Device</a>
+            <a href="Phone.html">Phone</a>
+            <a href="clients.html">Clients</a>
+            <a href="Reservation.html">Reservation</a>
+            <a href="PhoneNumbersReport.html">Phone Numbers Report</a>
+        </nav>
+        <h1>Phone Numbers Report</h1>
+
+        <div class="filter-container">
+            <input type="text" ng-model="deviceFilter" class="filter-input" placeholder="Filter by Device">
+            <input type="text" ng-model="statusFilter" class="filter-input" placeholder="Filter by Status">
+        </div>
+
+        <table>
+            <thead>
+                <tr>
+                    <th>Device</th>
+                    <th>Phone Number Status</th>
+                    <th>Number of Phone Numbers</th>
+                </tr>
+            </thead>
+            <tbody>
+                <tr ng-repeat="item in reportData | filter:searchFilter()">
+                    <td>{{ item.Device }}</td>
+                    <td>{{ item.Status }}</td>
+                    <td>{{ item.NumberCount }}</td>
+                </tr>
+            </tbody>
+        </table>
+
+        <div class="no-data" ng-show="(reportData | filter:searchFilter()).length === 0">
+            <p>No data found matching the criteria , Insert full word.</p>
+        </div>
+    </div>
+
+    <script>
+        angular.module('phoneReportApp', [])
+            .controller('ReportController', function ($scope, $http) {
+                $scope.reportData = [];
+                $scope.deviceFilter = '';
+                $scope.statusFilter = '';
+
+                // Fetch data from API
+                
+                $http.get('/api/phones/PhoneInfo')
+                    .then(function (response) {
+                        $scope.reportData = response.data;
+                    }, function (error) {
+                        console.error('Error fetching data:', error);
+                    });
+
+                // Custom filter function
+                $scope.searchFilter = function () {
+                    return function (item) {
+                        var deviceMatch = item.Device.toLowerCase().includes($scope.deviceFilter.toLowerCase());
+                        var statusMatch = item.Status.toLowerCase() === $scope.statusFilter.toLowerCase(); // Exact match
+                        return deviceMatch && (statusMatch || $scope.statusFilter === ''); // Allow empty filter for status
+                    
+                    };
+                };
+            });
+    </script>
+</body>
+</html>

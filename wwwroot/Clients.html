@@ -1,0 +1,893 @@
+﻿<!DOCTYPE html>
+<html lang="en" ng-app="clientApp">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <script src="https://ajax.googleapis.com/ajax/libs/angularjs/1.8.2/angular.min.js"></script>
+
+    <title>Client Management System</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            line-height: 1.6;
+            margin: 0;
+            padding: 20px;
+            background-color: #f4f4f4;
+        }
+
+        .container {
+            width: 80%;
+            margin: auto;
+            background: white;
+            padding: 20px;
+            border-radius: 5px;
+            box-shadow: 0 0 10px rgba(0,0,0,0.1);
+        }
+
+        table {
+            width: 100%;
+            border-collapse: collapse;
+            margin-top: 20px;
+        }
+
+        table, th, td {
+            border: 1px solid #ddd;
+        }
+
+        th, td {
+            padding: 12px;
+            text-align: left;
+        }
+
+        th {
+            background-color: #f2f2f2;
+            font-weight: bold;
+        }
+
+        tr:nth-child(even) {
+            background-color: #f9f9f9;
+        }
+
+        tr:hover {
+            background-color: #f5f5f5;
+        }
+
+        .no-data {
+            text-align: center;
+            color: #666;
+            padding: 20px;
+        }
+
+        .filter-container {
+            display: flex;
+            justify-content: space-between;
+            margin-bottom: 20px;
+        }
+
+        .filter-input {
+            padding: 8px;
+            border: 1px solid #ddd;
+            border-radius: 4px;
+            width: 30%;
+        }
+
+        .filter-button, .action-button {
+            padding: 8px 16px;
+            background-color: #007bff;
+            color: white;
+            border: none;
+            border-radius: 4px;
+            cursor: pointer;
+        }
+
+            .filter-button:hover, .action-button:hover {
+                background-color: #0056b3;
+            }
+
+        .modal {
+            display: none;
+            position: fixed;
+            z-index: 1000;
+            left: 0;
+            top: 0;
+            width: 100%;
+            height: 100%;
+            overflow: auto;
+            background-color: rgba(0, 0, 0, 0.4);
+        }
+
+        .modal-content {
+            background-color: #fefefe;
+            margin: 10% auto;
+            padding: 25px;
+            border: 1px solid #888;
+            width: 50%;
+            max-width: 500px;
+            border-radius: 8px;
+            box-shadow: 0 4px 8px rgba(0,0,0,0.1);
+        }
+
+            .modal-content div {
+                margin-bottom: 15px;
+            }
+
+            .modal-content label {
+                display: block;
+                margin-bottom: 5px;
+                font-weight: bold;
+            }
+
+            .modal-content input[type="text"],
+            .modal-content input[type="date"],
+            .modal-content select {
+                width: 100%;
+                padding: 8px;
+                border: 1px solid #ddd;
+                border-radius: 4px;
+                box-sizing: border-box;
+            }
+
+        .close {
+            color: #aaa;
+            float: right;
+            font-size: 28px;
+            font-weight: bold;
+            margin-top: -10px;
+        }
+
+            .close:hover,
+            .close:focus {
+                color: black;
+                text-decoration: none;
+                cursor: pointer;
+            }
+        nav {
+            background-color: #2c3e50; /* Dark blue-gray background */
+            padding: 10px 20px;
+            display: flex;
+            gap: 20px;
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+        }
+
+            nav a {
+                color: #ecf0f1; /* Light gray text */
+                text-decoration: none;
+                font-weight: 600;
+                padding: 8px 12px;
+                border-radius: 4px;
+                transition: background-color 0.3s ease, color 0.3s ease;
+            }
+
+                nav a:hover,
+                nav a:focus {
+                    background-color: #3498db; /* Bright blue on hover */
+                    color: white;
+                    outline: none;
+                }
+
+                nav a:active {
+                    background-color: #2980b9; /* Darker blue on click */
+                    color: white;
+                }
+
+    </style>
+
+</head>
+<body>
+  
+    <div class="container">
+        <nav>
+            <a href="Device.html">Device</a>
+            <a href="Phone.html">Phone</a>
+            <a href="clients.html">Clients</a>
+            <a href="Reservation.html">Reservation</a>
+            <a href="PhoneNumbersReport.html">Phone Numbers Report</a>
+        </nav>
+        <h1>Client Management System</h1>
+
+        <div class="filter-container">
+            <input type="text" id="nameFilter" class="filter-input" placeholder="Filter by Name">
+            <client-type-selector id="typeFilter" selected-type="filterTypeValue" class="filter-input" placeholder="Filter by Type"></client-type-selector>
+            <button id="applyFilter" class="filter-button">Apply Filter</button>
+            <button id="addClientBtn" class="action-button">Add Client</button>
+        </div>
+
+        <table id="clientTable">
+            <thead>
+                <tr>
+                    <th>ID</th>
+                    <th>Name</th>
+                    <th>Type</th>
+                    <th>Birth Date</th>
+                    <th>Actions</th>
+                </tr>
+            </thead>
+            <tbody id="clientTableBody">
+                <!-- Client rows will be populated here -->
+            </tbody>
+        </table>
+
+        <div id="noDataMessage" class="no-data" style="display:none;">
+            <p>No clients found matching the criteria.</p>
+        </div>
+
+        <!-- Modal for Add/Edit Client -->
+        <div id="clientModal" class="modal">
+            <div class="modal-content">
+                <span class="close" id="closeModal">&times;</span>
+                <h2 id="modalTitle">Add New Client</h2>
+                <form id="clientForm">
+                    <input type="hidden" id="clientId">
+                    <div>
+                        <label for="clientName">Name:</label>
+                        <input type="text" id="clientName" required>
+                    </div>
+                    <div>
+                        <label for="clientType">Type:</label>
+                        <client-type-selector selected-type="clientTypeValue"></client-type-selector>
+                        <input type="hidden" id="clientType">
+                    </div>
+                    <div>
+                        <label for="clientBirthDate">Birth Date:</label>
+                        <input type="date" id="clientBirthDate">
+                    </div>
+
+                    <button type="submit" class="action-button">Save</button>
+                </form>
+            </div>
+        </div>
+
+    </div>
+    <div id="reserveModal" class="modal" ng-controller="reservationController">
+        <div class="modal-content">
+            <span class="close" ng-click="closeReserveModal()">&times;</span>
+            <h2>Reserve Client</h2>
+            <form ng-submit="handleReserveFormSubmit($event)">
+                <input type="hidden" ng-model="reserveClientId">
+                <div>
+                    <label>Phone Number:</label>
+                    <select ng-model="selectedPhone"
+                            ng-options="phone as phone for phone in availablePhoneNumbers"
+                            class="form-control"
+                            required>
+                        <option value="">Select Phone</option>
+                    </select>
+                    <div ng-if="availablePhoneNumbers.length === 0" class="no-phones">
+                        No available phone numbers found
+                    </div>
+                </div>
+                <button type="submit" class="action-button" ng-disabled="!selectedPhone">
+                    Reserve
+                </button>
+            </form>
+        </div>
+    </div>
+
+    <!-- Unreserve Modal -->
+    <!-- Modal HTML - Update to use Angular directives -->
+    <div id="unreserveModal" class="modal" ng-controller="unreserveController">
+        <div class="modal-content">
+            <span class="close" id="closeUnreserveModal">&times;</span>
+            <h2 id="unreserveModalTitle">Unreserve Client</h2>
+            <form id="unreserveForm" ng-submit="handleUnreserveSubmit()">
+                <input type="hidden" id="unreserveClientId">
+                <div>
+                    <label for="unreservePhoneNumber">Phone Number:</label>
+                    <select id="unreservePhoneNumber" ng-model="selectedUnreservePhone" class="scrollable-select">
+                        <option value="">Select Phone</option>
+                        <option ng-repeat="phone in reservedPhones" value="{{phone}}">{{phone}}</option>
+                    </select>
+                </div>
+                <button type="submit" class="action-button">Unreserve</button>
+            </form>
+        </div>
+    </div>
+
+    <script>
+        angular.module('clientApp', [])
+            .controller('reservationController', ['$scope', '$http', function ($scope, $http) {
+                $scope.availablePhoneNumbers = [];
+                $scope.selectedPhone = '';
+                $scope.reserveClientId = null;
+
+                $scope.loadAvailablePhoneNumbers = function () {
+                    $http.get('/api/Phones/availablenumbers', {
+                        headers: {
+                            'Accept': 'application/json',
+                            'Content-Type': 'application/json'
+                        }
+                    })
+                        .then(function (response) {
+                            if (Array.isArray(response.data)) {
+                                $scope.availablePhoneNumbers = response.data.filter(function (phone) {
+                                    return typeof phone === 'string' && phone.trim() !== '';
+                                });
+                            } else {
+                                console.error('Unexpected response format:', response.data);
+                                $scope.availablePhoneNumbers = [];
+                            }
+                        })
+                        .catch(function (error) {
+                            console.error('Error loading phone numbers:', error);
+                            $scope.availablePhoneNumbers = [];
+                        });
+                };
+
+                $scope.openReserveModal = function (clientId) {
+                    $scope.reserveClientId = clientId;
+                    $scope.selectedPhone = '';
+                    $scope.loadAvailablePhoneNumbers();
+                    document.getElementById('reserveModal').style.display = 'block';
+                };
+
+                $scope.closeReserveModal = function () {
+                    document.getElementById('reserveModal').style.display = 'none';
+                };
+
+                $scope.handleReserveFormSubmit = function (e) {
+                    e.preventDefault();
+                    if (!$scope.selectedPhone) {
+                        alert('Please select a phone number');
+                        return;
+                    }
+
+                    $http.post('/api/Clients/Reserve', {
+                        ClientId: $scope.reserveClientId,
+                        PhoneNumber: $scope.selectedPhone
+                    })
+                        .then(function () {
+                            $scope.closeReserveModal();
+                            if (typeof fetchClients === 'function') {
+                                fetchClients(); // Refresh client list
+                            } else {
+                                console.warn('fetchClients function not found in the scope.');
+                            }
+                        })
+                        .catch(function (error) {
+                            handleReservationError(error);
+                        });
+                };
+
+                function handleReservationError(error) {
+                    console.error('Reservation error:', error);
+                    let errorMessage = 'Error reserving client';
+
+                    if (error.data) {
+                        if (error.data.includes('phone number is in use')) {
+                            errorMessage = 'This phone number is already in use';
+                        } else if (error.data.includes('already be reserved')) {
+                            errorMessage = 'This client is already reserved';
+                        } else {
+                            errorMessage = error.data;
+                        }
+                    }
+
+                    alert(errorMessage);
+                }
+            }])
+            // ... rest of your controllers and directives ...
+            // Updated unreserveController
+            .controller('unreserveController', function ($scope, $http) {
+                $scope.reservedPhones = [];
+                $scope.selectedUnreservePhone = '';
+
+                $scope.loadReservedPhones = function (clientId) {
+                    $http.get(`/api/Clients/${clientId}`)
+                        .then(function (response) {
+                            // Check if the response contains the expected properties
+                            if (response.data && response.data.PhoneNumber) {
+                                $scope.reservedPhones = [response.data.PhoneNumber];
+                                $scope.selectedUnreservePhone = response.data.PhoneNumber; // Set the selected phone number
+                            } else {
+                                $scope.reservedPhones = [];
+                                $scope.selectedUnreservePhone = ''; // Clear selection if no reserved phone
+                            }
+                        })
+                        .catch(function (error) {
+                            console.error('Error loading reserved phone:', error);
+                        });
+                };
+
+                $scope.handleUnreserveSubmit = function () {
+                    const clientId = document.getElementById('unreserveClientId').value;
+                    $http.post(`/api/Clients/${clientId}/Unreserve`)
+                        .then(function (response) {
+                            if (response.data.message === "Client unreserved successfully") {
+                                // Reload reserved phones before closing modal
+                                $scope.loadReservedPhones(clientId);
+                            }
+                            document.getElementById('unreserveModal').style.display = 'none';
+                            fetchClients();
+                        })
+                        .catch(function (error) {
+                            console.error("Error unreserving client:", error);
+                            alert("Failed to unreserve client. " + JSON.stringify(error));
+                        });
+                };
+            })
+            .directive('clientTypeSelector', function () {
+                return {
+                    restrict: 'E',
+                    replace: true,
+                    template: `
+                                                              <select ng-model="selectedType" ng-change="updateType()" required class="form-control">
+                                                                  <option value="">All Types</option>
+                                                                  <option value="0">Individual</option>
+                                                                  <option value="1">Organization</option>
+                                                              </select>
+                                                          `,
+                    scope: {
+                        selectedType: '=',
+                        clientTypeValue: '='
+                    },
+                    link: function (scope, element, attrs) {
+                        const hiddenInput = document.getElementById(attrs.id || 'clientType');
+                        scope.selectedType = attrs.id ? '' : '0';
+                        scope.updateType = function () {
+                            if (hiddenInput) {
+                                hiddenInput.value = scope.selectedType;
+                            }
+                            if (scope.clientTypeValue !== undefined) {
+                                scope.clientTypeValue = scope.selectedType;
+                            }
+                        };
+                        scope.$watch('selectedType', function (newVal) {
+                            if (newVal !== undefined) {
+                                scope.updateType();
+                            }
+                        });
+                        scope.updateType();
+                    }
+                };
+
+            });
+
+
+    </script>
+    <script>
+        const clientTableBody = document.getElementById('clientTableBody');
+        const noDataMessage = document.getElementById('noDataMessage');
+        const clientModal = document.getElementById('clientModal');
+        const modalTitle = document.getElementById('modalTitle');
+        const clientForm = document.getElementById('clientForm');
+        const clientIdInput = document.getElementById('clientId');
+        const clientNameInput = document.getElementById('clientName');
+        const clientTypeInput = document.getElementById('clientType');
+        const clientBirthDateInput = document.getElementById('clientBirthDate');
+        const closeModalBtn = document.getElementById('closeModal');
+        const addClientBtn = document.getElementById('addClientBtn');
+        const applyFilterButton = document.getElementById('applyFilter');
+        const nameFilterInput = document.getElementById('nameFilter');
+        const clientPhoneNumberInput = document.getElementById('clientPhoneNumber');
+        const clientBEDInput = document.getElementById('clientBED');
+        const clientEEDInput = document.getElementById('clientEED');
+
+        let angularScope;
+        angular.element(document).ready(function () {
+            angularScope = angular.element(document.querySelector('[ng-app="clientApp"]')).scope();
+        });
+
+        document.addEventListener('DOMContentLoaded', fetchClients);
+        addClientBtn.addEventListener('click', () => openModal('add'));
+        closeModalBtn.addEventListener('click', closeModal);
+        clientForm.addEventListener('submit', handleFormSubmit);
+        applyFilterButton.addEventListener('click', filterClients);
+        let currentFilters = {
+            name: '',
+            type: ''
+        };
+
+        async function fetchClients() {
+            try {
+                // Fetch both clients and reservations
+                const [clientsResponse, reservationsResponse] = await Promise.all([
+                    fetch('/api/Clients'),
+                    fetch('/api/Reservations')
+                ]);
+
+                if (!clientsResponse.ok || !reservationsResponse.ok) {
+                    throw new Error('Failed to fetch data');
+                }
+
+                const clients = await clientsResponse.json();
+                const reservations = await reservationsResponse.json();
+
+                // Merge reservation data with clients
+                const clientsWithReservations = clients.map(client => {
+                    const clientReservations = reservations.filter(r => r.ClientId === client.Id);
+                    return {
+                        ...client,
+                        Reservations: clientReservations,
+                        HasActiveReservation: clientReservations.some(r => r.EED === "0001-01-01T00:00:00" || r.EED === null) // Include null check
+                    };
+                });
+
+                displayClients(clientsWithReservations);
+            } catch (error) {
+                console.error('Error:', error);
+                noDataMessage.style.display = 'block';
+                clientTableBody.innerHTML = '';
+            }
+        }
+
+        function displayClients(clients) {
+            clientTableBody.innerHTML = '';
+            noDataMessage.style.display = clients.length === 0 ? 'block' : 'none';
+
+            clients.forEach(client => {
+                if (!matchesFilters(client)) return;
+
+                const row = document.createElement('tr');
+                row.innerHTML = `
+                    <td>${client.Id}</td>
+                    <td>${client.Name}</td>
+                    <td>${client.Type === 0 ? 'Individual' : 'Organization'}</td>
+                    <td>${client.Type === 0 ? (client.BirthDate ? new Date(client.BirthDate).toLocaleDateString() : 'N/A') : ''}</td>
+                    <td>
+                        <button class="action-button" onclick="openModal('edit', ${client.Id})">Edit</button>
+                        <button class="action-button" onclick="deleteClient(${client.Id})">Delete</button>
+                        <button class="action-button" onclick="openReserveModal(${client.Id})">
+                            ${client.Reservations.length > 0 ? 'Edit Reservation' : 'Reserve'}
+                        </button>
+                        ${client.HasActiveReservation ? `<button class="action-button" onclick="openUnreserveModal(${client.Id})">
+            Unreserve
+</button>`
+                        : ''}
+                    </td>
+                `;
+                clientTableBody.appendChild(row);
+            });
+
+            if (clientTableBody.children.length === 0) {
+                noDataMessage.style.display = 'block';
+            }
+        }
+
+
+        const reserveModal = document.getElementById('reserveModal');
+        const reserveModalTitle = document.getElementById('reserveModalTitle');
+        const reserveForm = document.getElementById('reserveForm');
+        const reserveClientIdInput = document.getElementById('reserveClientId');
+        const reservePhoneNumberSelect = document.getElementById('reservePhoneNumber'); // Corrected selector
+        const closeReserveModalBtn = document.getElementById('closeReserveModal');
+
+
+
+        function openReserveModal(clientId) {
+            var modalElement = document.getElementById('reserveModal');
+            var scope = angular.element(modalElement).scope();
+
+            // Apply changes in Angular context
+            scope.$apply(function () {
+                scope.openReserveModal(clientId);
+            });
+
+            // Show the modal
+            modalElement.style.display = 'block';
+        }
+        function openUnreserveModal(clientId) {
+            document.getElementById('unreserveClientId').value = clientId;
+            angular.element(document.querySelector('[ng-controller="unreserveController"]')).scope().loadReservedPhones(clientId);
+            document.getElementById('unreserveModal').style.display = 'block';
+        }
+        document.getElementById('closeUnreserveModal').addEventListener('click', function () {
+            document.getElementById('unreserveModal').style.display = 'none';
+        });
+
+        // Update your button click handlers to use this function
+        document.querySelectorAll('[onclick^="openReserveModal"]').forEach(button => {
+            button.onclick = function () {
+                var clientId = this.getAttribute('onclick').match(/\d+/)[0];
+                openReserveModal(clientId);
+            };
+        });
+        function closeReserveModal() {
+            reserveModal.style.display = 'none';
+        }
+
+
+
+
+
+        function matchesFilters(client) {
+            const nameMatch = client.Name.toLowerCase().includes(currentFilters.name.toLowerCase()) || currentFilters.name === '';
+            const typeMatch = currentFilters.type === '' || client.Type.toString() === currentFilters.type;
+            return nameMatch && typeMatch;
+        }
+
+        function openModal(action, id = null) {
+            if (action === 'add') {
+                modalTitle.textContent = 'Add New Client';
+                clientForm.reset();
+                clientIdInput.value = '';
+                if (angularScope) {
+                    angularScope.$apply(() => {
+                        angularScope.clientTypeValue = '0';
+                    });
+                }
+            } else if (action === 'edit') {
+                modalTitle.textContent = 'Edit Client';
+                fetchClientDetails(id);
+            }
+            clientModal.style.display = 'block';
+        }
+
+        async function fetchClientDetails(id) {
+            try {
+                const response = await fetch(`/api/Clients/${id}`);
+                if (!response.ok) throw new Error('Failed to fetch client details');
+                const client = await response.json();
+                clientIdInput.value = client.Id;
+                clientNameInput.value = client.Name;
+                if (angularScope) {
+                    angularScope.$apply(() => {
+                        angularScope.clientTypeValue = client.Type.toString();
+                    });
+                }
+                clientBirthDateInput.value = client.BirthDate ? client.BirthDate.split('T')[0] : '';
+            } catch (error) {
+                console.error('Error fetching client details:', error);
+                alert('Error loading client details. Please try again.');
+                closeModal();
+            }
+        }
+
+        function closeModal() {
+            clientModal.style.display = 'none';
+        }
+
+        async function handleFormSubmit(e) {
+            e.preventDefault();
+            const clientData = {
+                Id: clientIdInput.value ? parseInt(clientIdInput.value) : 0,
+                Name: clientNameInput.value.trim(),
+                Type: clientTypeInput.value ? parseInt(clientTypeInput.value) : 0,
+                BirthDate: clientBirthDateInput.value ? new Date(clientBirthDateInput.value).toISOString() : null,
+
+            };
+            try {
+                if (clientIdInput.value) {
+                    await updateClient(clientData);
+                } else {
+                    await addClient(clientData);
+                }
+                closeModal();
+                fetchClients();
+            } catch (error) {
+                console.error('Error saving client:', error);
+                alert('Error saving client. Please try again.');
+            }
+        }
+
+        async function addClient(client) {
+            const response = await fetch('/api/Clients', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify(client)
+            });
+            if (!response.ok) throw new Error('Failed to add client');
+        }
+
+        async function updateClient(client) {
+            const response = await fetch('/api/Clients', {
+                method: 'PUT',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify(client)
+            });
+            if (!response.ok) throw new Error('Failed to update client');
+        }
+
+        async function deleteClient(id) {
+            if (confirm('Are you sure you want to delete this client?')) {
+                try {
+                    const response = await fetch(`/api/Clients/${id}`, { method: 'DELETE' });
+                    if (!response.ok) throw new Error('Failed to delete client');
+                    fetchClients();
+                } catch (error) {
+                    console.error('Error deleting client:', error);
+                    alert('Error deleting client.');
+                }
+            }
+        }
+
+        function filterClients() {
+            currentFilters.name = nameFilterInput.value;
+            currentFilters.type = document.getElementById('typeFilter').value;
+            fetchClients();
+        }
+
+
+
+        // Add new client
+        async function addClient(client) {
+            const response = await fetch('/api/Clients', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                },
+                body: JSON.stringify(client)
+            });
+
+            if (!response.ok) throw new Error('Failed to add client');
+        }
+
+        // Update existing client
+        async function updateClient(client) {
+            const response = await fetch(`/api/Clients/${client.Id}`, {
+                method: 'PUT',
+                headers: {
+                    'Content-Type': 'application/json',
+                },
+                body: JSON.stringify(client)
+            });
+
+            if (!response.ok) throw new Error('Failed to update client');
+        }
+
+        // Delete client
+        async function deleteClient(id) {
+            if (!confirm('Are you sure you want to delete this client?')) return;
+
+            try {
+                const response = await fetch(`/api/Clients/${id}`, {
+                    method: 'DELETE'
+                });
+
+                if (!response.ok) throw new Error('Failed to delete client');
+                fetchClients(); // Refresh the list
+            } catch (error) {
+                console.error('Error deleting client:', error);
+                alert('Error deleting client. Please try again.');
+            }
+        }
+
+        // Filter clients
+        function filterClients() {
+            currentFilters.name = nameFilterInput.value;
+            currentFilters.type = document.getElementById('typeFilter').value;
+
+            // Re-fetch clients to apply filters
+            fetchClients();
+        }
+
+        // Add new client
+        async function addClient(client) {
+            const response = await fetch('/api/Clients', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                },
+                body: JSON.stringify(client)
+            });
+
+            if (!response.ok) throw new Error('Failed to add client');
+        }
+
+        // Update existing client
+        async function updateClient(client) {
+            const response = await fetch(`/api/Clients/${client.Id}`, {
+                method: 'PUT',
+                headers: {
+                    'Content-Type': 'application/json',
+                },
+                body: JSON.stringify(client)
+            });
+
+            if (!response.ok) throw new Error('Failed to update client');
+        }
+
+        // Delete client
+        async function deleteClient(id) {
+            if (!confirm('Are you sure you want to delete this client?')) return;
+
+            try {
+                const response = await fetch(`/api/Clients/${id}`, {
+                    method: 'DELETE'
+                });
+
+                if (!response.ok) throw new Error('Failed to delete client');
+                fetchClients(); // Refresh the list
+            } catch (error) {
+                console.error('Error deleting client:', error);
+                alert('Error deleting client. Please try again.');
+            }
+        }
+
+        // Filter clients
+        function filterClients() {
+            currentFilters.name = nameFilterInput.value;
+            currentFilters.type = document.getElementById('typeFilter').value;
+
+            // Re-fetch clients to apply filters
+            fetchClients();
+        }
+    </script>
+    <div class="container" ng-app="clientApp" ng-controller="reportController">
+        <h1>Clients Per Type Report</h1>
+
+        <div class="filter-container">
+            <client-type-selector id="typeFilter" selected-type="filterTypeValue" client-type-value="selectedType" class="filter-input"></client-type-selector>
+            <button id="applyFilter" class="filter-button" ng-click="applyFilter()">Apply Filter</button>
+
+        </div>
+
+        <table id="clientTable">
+            <thead>
+                <tr>
+                    <th>Type</th>
+                    <th>No. of clients</th>
+                </tr>
+            </thead>
+            <tbody id="clientTableBody">
+                <tr ng-repeat="item in filteredData">
+                    <td>{{ item.type === '0' ? 'Individual' : 'Organization' }}</td>
+                    <td>{{ item.count }}</td>
+                </tr>
+            </tbody>
+        </table>
+
+        <div id="noDataMessage" class="no-data" ng-show="filteredData.length === 0">
+            <p>No clients found matching the criteria.</p>
+        </div>
+    </div>
+
+    <script>
+        angular.module('clientApp')
+            .controller('reportController', function ($scope, $http, ReportService) {
+                $scope.selectedType = ''; // Initialize with no filter
+                $scope.reportData = []; // Will hold our complete report data
+                $scope.filteredData = []; // Will hold filtered data
+
+                // Load initial data
+                $scope.loadReportData = function () {
+                    ReportService.getClientReportData()
+                        .then(function (data) {
+                            $scope.reportData = data;
+                            $scope.applyFilter(); // Apply current filter after loading
+                        })
+                        .catch(function (error) {
+                            console.error('Error loading report data:', error);
+                            $scope.reportData = [];
+                            $scope.filteredData = [];
+                        });
+                };
+
+                // Apply filter button handler
+                $scope.applyFilter = function () {
+                    if ($scope.selectedType) {
+                        $scope.filteredData = $scope.reportData.filter(function (item) {
+                            return item.type === $scope.selectedType;
+                        });
+                    } else {
+                        $scope.filteredData = $scope.reportData;
+                    }
+                };
+
+                // Clear filter button handler
+
+
+                // Initial load
+                $scope.loadReportData();
+            });
+
+        // Angular Service (ReportService.js) - Data Access Layer (DAL)
+        angular.module('clientApp')
+            .service('ReportService', function ($http) {
+                return {
+                    getClientReportData: function () {
+                        return $http.get('/api/Clients/Report')
+                            .then(function (response) {
+                                return response.data;
+                            })
+                            .catch(function (error) {
+                                console.error('Error fetching client report data:', error);
+                                throw error;
+                            });
+                    }
+                };
+            });
+    </script>
+
+
+</body>
+</html>
